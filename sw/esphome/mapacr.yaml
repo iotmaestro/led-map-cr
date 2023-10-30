@@ -1,0 +1,68 @@
+esphome:
+  name: mapacr
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  password: "svetylka"
+
+ota:
+  password: "svetylka"
+
+wifi:
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Mapacr Fallback Hotspot"
+    password: "Ba2mCoucwKGW"
+
+captive_portal:
+    
+
+globals:
+  - id: actual_effect
+    type: int
+    restore_value: yes
+    initial_value: '0'
+
+light:
+  - platform: fastled_clockless
+    chipset: SK6812
+    pin: GPIO19
+    num_leds: 209
+    rgb_order: GRB
+    name: "Mapa CR LEDs"
+    id: mapa_cr_leds
+    effects:
+    - addressable_fireworks:
+        use_random_color: true
+    - addressable_rainbow:
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO21
+      inverted: true
+    name: "Mapa CR Test Button"
+
+    on_double_click:
+      then:
+        # add a small delay because on_click will always take precedence and strip will never turn off otherwise
+        - delay: 500ms
+        - light.turn_off: mapa_cr_leds
+
+    on_click:
+      then:
+        - lambda: |-
+            static int effect_index = 0;
+            auto mapa_lights = id(mapa_cr_leds);
+            auto effects = mapa_lights->get_effects();
+
+            mapa_lights->turn_on().set_effect(effects[effect_index]->get_name().c_str()).perform();
+            effect_index = (effect_index + 1) % effects.size();
